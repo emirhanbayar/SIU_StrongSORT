@@ -10,18 +10,14 @@ from os.path import join
 warnings.filterwarnings("ignore")
 from opts import opt
 from deep_sort_app import run
-from AFLink.AppFreeLink import *
-from GSI import GSInterpolation
 
 if __name__ == '__main__':
-    if opt.AFLink:
-        model = PostLinker()
-        model.load_state_dict(torch.load(opt.path_AFLink))
-        dataset = LinkData('', '')
+
+    total_extractions, total_frames, total_detections, total_ecc_time, total_prediciton_time, total_prematch_time, total_match_time, total_manag_time, total_embed_time = 0, 0, 0, 0, 0, 0, 0, 0, 0
     for i, seq in enumerate(opt.sequences, start=1):
         print('processing the {}th video {}...'.format(i, seq))
         path_save = join(opt.dir_save, seq + '.txt')
-        run(
+        extractions, detections, frames, ecc_time, prediciton_time, prematch_time, match_time, manag_time, embed_time, =  run(
             sequence_dir=join(opt.dir_dataset, seq),
             detection_file=join(opt.dir_dets, seq + '.npy'),
             output_file=path_save,
@@ -30,27 +26,37 @@ if __name__ == '__main__':
             min_detection_height=opt.min_detection_height,
             max_cosine_distance=opt.max_cosine_distance,
             nn_budget=opt.nn_budget,
-            display=False
+            display=opt.display,
         )
-        if opt.AFLink:
-            linker = AFLink(
-                path_in=path_save,
-                path_out=path_save,
-                model=model,
-                dataset=dataset,
-                thrT=(0, 30),  # (-10, 30) for CenterTrack, FairMOT, TransTrack.
-                thrS=75,
-                thrP=0.05  # 0.10 for CenterTrack, FairMOT, TransTrack.
-            )
-            linker.link()
-        if opt.GSI:
-            GSInterpolation(
-                path_in=path_save,
-                path_out=path_save,
-                interval=20,
-                tau=10
-            )
 
+        total_extractions += extractions
+        total_frames += frames
+        total_detections += detections
+        total_ecc_time += ecc_time
+        total_prediciton_time += prediciton_time
+        total_prematch_time += prematch_time
+        total_match_time += match_time
+        total_manag_time += manag_time
+        total_embed_time += embed_time
+        # print("Extracted %d features in total" % extractions)
+        # print("Extraction per Frame (EPF): %.2f" % (extractions / frames))
+        # print("Detections per Frame (DPF): %.2f" % (detections / frames))
+        # print("Percentage of Detections Extracted (PDE): %.2f" % (extractions / detections * 100))
 
-
+    # print('All videos are processed...')
+    print("*************************", opt.occlusion_threshold, "*************************")
+    print("Extracted %d features in total" % total_extractions)
+    print("Extraction per Frame (EPF): %.2f" % (total_extractions / total_frames))
+    print("Detections per Frame (DPF): %.2f" % (total_detections / total_frames))
+    print("Percentage of Detections Extracted (PDE): %.2f" % (total_extractions / total_detections * 100))
+    print("ECC Time: %.2f" % total_ecc_time)
+    print("Prediction Time: %.2f" % total_prediciton_time)
+    print("Prematch Time: %.2f" % total_prematch_time)
+    print("Match Time: %.2f" % total_match_time)
+    print("Embed Time: %.2f" % total_embed_time)
+    print("Manag Time: %.2f" % total_manag_time)
+    print("FPS: %.2f" % (total_frames / (total_ecc_time + total_prediciton_time + total_prematch_time + total_match_time + total_embed_time + total_manag_time)))
+    print("Total Frames: %.2f" % (total_frames))
+    print("*******************************************************************************")
+    
 

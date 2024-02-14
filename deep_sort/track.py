@@ -137,17 +137,16 @@ class Track:
         else:
             return eye
 
-    def camera_update(self, video, frame):
-        dict_frame_matrix = opt.ecc[video]
-        frame = str(int(frame))
-        if frame in dict_frame_matrix:
-            matrix = self.get_matrix(dict_frame_matrix, frame)
-            x1, y1, x2, y2 = self.to_tlbr()
-            x1_, y1_, _ = matrix @ np.array([x1, y1, 1]).T
-            x2_, y2_, _ = matrix @ np.array([x2, y2, 1]).T
-            w, h = x2_ - x1_, y2_ - y1_
-            cx, cy = x1_ + w / 2, y1_ + h / 2
-            self.mean[:4] = [cx, cy, w / h, h]
+    def camera_update(self, warp_matrix):
+        [a, b] = warp_matrix
+        warp_matrix = np.array([a, b, [0, 0, 1]])
+        warp_matrix = warp_matrix.tolist()
+        x1, y1, x2, y2 = self.to_tlbr()
+        x1_, y1_, _ = warp_matrix @ np.array([x1, y1, 1]).T
+        x2_, y2_, _ = warp_matrix @ np.array([x2, y2, 1]).T
+        w, h = x2_ - x1_, y2_ - y1_
+        cx, cy = x1_ + w / 2, y1_ + h / 2
+        self.mean[:4] = [cx, cy, w / h, h]
 
     def update(self, detection):
         """Perform Kalman filter measurement update step and update the feature
@@ -161,13 +160,14 @@ class Track:
         """
         self.mean, self.covariance = self.kf.update(self.mean, self.covariance, detection.to_xyah(), detection.confidence)
 
-        feature = detection.feature / np.linalg.norm(detection.feature)
-        if opt.EMA:
-            smooth_feat = opt.EMA_alpha * self.features[-1] + (1 - opt.EMA_alpha) * feature
-            smooth_feat /= np.linalg.norm(smooth_feat)
-            self.features = [smooth_feat]
-        else:
-            self.features.append(feature)
+        if not detection.gated:
+            feature = detection.feature / np.linalg.norm(detection.feature)
+            if opt.EMA:
+                smooth_feat = opt.EMA_alpha * self.features[-1] + (1 - opt.EMA_alpha) * feature
+                smooth_feat /= np.linalg.norm(smooth_feat)
+                self.features = [smooth_feat]
+            else:
+                self.features.append(feature)
 
         self.hits += 1
         self.time_since_update = 0

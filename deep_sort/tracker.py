@@ -6,6 +6,10 @@ from . import linear_assignment
 from . import iou_matching
 from .track import Track
 from opts import opt
+from .embedding import Embedder
+import time
+
+GATE_FEATURE = np.ones(2048) * 1e5
 
 class Tracker:
     """
@@ -44,6 +48,19 @@ class Tracker:
         self.tracks = []
         self._next_id = 1
 
+        self.ecc_time = 0
+        self.prediction_time = 0
+        self.gate_time = 0
+        self.match_time = 0
+        self.track_management_time = 0
+        self.embedding_time = 0
+        self.read_time = 0
+        self.total_frames = 0
+        self.total_detections = 0
+        self.total_extracted_features = 0
+
+        self.embedding = Embedder()
+
     def predict(self):
         """Propagate track state distributions one time step forward.
 
@@ -56,7 +73,7 @@ class Tracker:
         for track in self.tracks:
             track.camera_update(video, frame)
 
-    def update(self, detections):
+    def update(self, detections, frame):
         """Perform measurement update and track management.
 
         Parameters
@@ -65,10 +82,14 @@ class Tracker:
             A list of detections at the current time step.
 
         """
+        self.total_frames += 1
+        self.total_detections += len(detections)
+
         # Run matching cascade.
         matches, unmatched_tracks, unmatched_detections = \
-            self._match(detections)
+            self._match(detections, frame)
 
+        track_management_start = time.time()
         # Update track set.
         for track_idx, detection_idx in matches:
             self.tracks[track_idx].update(detections[detection_idx])
@@ -90,8 +111,10 @@ class Tracker:
                 track.features = []
         self.metric.partial_fit(
             np.asarray(features), np.asarray(targets), active_targets)
+        
+        self.track_management_time += time.time() - track_management_start
 
-    def _match(self, detections):
+    def _match(self, detections, frame):
 
         def gated_metric(tracks, dets, track_indices, detection_indices):
             features = np.array([dets[i].feature for i in detection_indices])
@@ -103,12 +126,42 @@ class Tracker:
 
             return cost_matrix
 
+        match_start = time.time()
         # Split track set into confirmed and unconfirmed tracks.
         confirmed_tracks = [
             i for i, t in enumerate(self.tracks) if t.is_confirmed()]
         unconfirmed_tracks = [
             i for i, t in enumerate(self.tracks) if not t.is_confirmed()]
+        self.match_time += time.time() - match_start
 
+        gate_start = time.time()
+        non_gated_detecions = []
+        tracklet_bboxes = [self.tracks[i].to_tlwh() for i in confirmed_tracks]
+        for i, det in enumerate(detections):
+            if len(tracklet_bboxes) == 0:
+                non_gated_detecions.append(detections[i].tlwh)
+                detections[i].gated = False
+                continue
+            ious = iou_matching.iou(det.tlwh, tracklet_bboxes)
+            if np.sum(ious > opt.occlusion_threshold) != 1:
+                non_gated_detecions.append(detections[i].tlwh)
+                detections[i].gated = False
+            else:
+                detections[i].feature = GATE_FEATURE
+                detections[i].gated = True
+
+        self.gate_time += time.time() - gate_start
+
+        if non_gated_detecions and not opt.offline:
+            self.total_extracted_features += len(non_gated_detecions)
+            embedding_start = time.time()
+            features = iter(self.embedding.inference(non_gated_detecions, frame))
+            self.embedding_time += time.time() - embedding_start
+            for i, det in enumerate(detections):
+                if not det.gated:
+                    det.feature = next(features)        
+
+        match_start = time.time()
         # Associate confirmed tracks using appearance features.
         matches_a, unmatched_tracks_a, unmatched_detections = \
             linear_assignment.matching_cascade(
@@ -129,6 +182,7 @@ class Tracker:
 
         matches = matches_a + matches_b
         unmatched_tracks = list(set(unmatched_tracks_a + unmatched_tracks_b))
+        self.match_time += time.time() - match_start
         return matches, unmatched_tracks, unmatched_detections
 
     def _initiate_track(self, detection):

@@ -7,12 +7,15 @@ import os
 import cv2
 import numpy as np
 
+import PIL
 from application_util import preprocessing
 from application_util import visualization
 from deep_sort import nn_matching
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
+from deep_sort.ecc import ECC
 from opts import opt
+import time
 
 
 def gather_sequence_info(sequence_dir, detection_file):
@@ -115,17 +118,101 @@ def create_detections(detection_mat, frame_idx, min_height=0):
         Returns detection responses at given frame index.
 
     """
-    frame_indices = detection_mat[:, 0].astype(np.int)
+    frame_indices = detection_mat[:, 0].astype(np.int64)
     mask = frame_indices == frame_idx
 
     detection_list = []
     for row in detection_mat[mask]:
-        bbox, confidence, feature = row[2:6], row[6], row[10:]
+        bbox, confidence = row[2:6], row[6]
         if bbox[3] < min_height:
             continue
-        detection_list.append(Detection(bbox, confidence, feature))
+        if opt.offline:
+            feature = row[10:]
+            detection_list.append(Detection(bbox, confidence, feature))
+        else:
+            detection_list.append(Detection(bbox, confidence, None))
+
     return detection_list
 
+def visualize(dets, tracklet_means, tracklet_bboxes, img):
+    # draw traclket bboxes, dets bboxes and tracklet means
+    for tracklet_bbox in tracklet_bboxes:
+        x1, y1, w, h = tracklet_bbox[:4]
+        cv2.rectangle(
+            img,
+            (int(x1), int(y1)),
+            (int(x1 + w), int(y1 + h)),
+            (0, 255, 0),
+            1
+        )
+
+    for det in dets:
+        x1, y1, w, h = det.tlwh
+        if not det.gated:
+            cv2.rectangle(
+                img,
+                (int(x1), int(y1)),
+                (int(x1 + w), int(y1 + h)),
+                (0, 255, 255),
+                1
+            )
+        else:
+            cv2.rectangle(
+                img,
+                (int(x1), int(y1)),
+                (int(x1 + w), int(y1 + h)),
+                (255, 0, 0),
+                1
+            )
+
+    for tracklet_mean in tracklet_means:
+        cv2.circle(
+            img,
+            (int(tracklet_mean[0]), int(tracklet_mean[1])),
+            10,
+            (0, 0, 255),
+            1
+        )
+
+    #add legend
+    cv2.putText(
+        img,
+        "Tracklet bbox",
+        (10, 20),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 255, 0),
+        1
+    )
+    cv2.putText(
+        img,
+        "gated detection bbox",
+        (10, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (255, 0, 0),
+        1
+    )
+
+    cv2.putText(
+        img,
+        "Tracklet mean",
+        (10, 60),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 0, 255),
+        1
+    )
+
+    cv2.putText(
+        img,
+        "Non-gated detection",
+        (10, 80),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 255, 255),
+        1
+    )
 
 def run(sequence_dir, detection_file, output_file, min_confidence,
         nms_max_overlap, min_detection_height, max_cosine_distance,
@@ -166,6 +253,7 @@ def run(sequence_dir, detection_file, output_file, min_confidence,
     )
     tracker = Tracker(metric)
     results = []
+    cmc = ECC()
 
     def frame_callback(vis, frame_idx):
         # print("Processing frame %05d" % frame_idx)
@@ -182,41 +270,72 @@ def run(sequence_dir, detection_file, output_file, min_confidence,
             boxes, nms_max_overlap, scores)
         detections = [detections[i] for i in indices]
 
+        if len(detections) == 0:
+            return
+    
+        read_start = time.time()
+        frame = PIL.Image.open(seq_info["image_filenames"][frame_idx])
+        cv2_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
+        tracker.read_time += time.time() - read_start
+
+        ecc_start = time.time()
         # Update tracker.
         if opt.ECC:
-            tracker.camera_update(sequence_dir.split('/')[-1], frame_idx)
+            if len(tracker.tracks) >= 1:
+                warp_matrix = cmc.apply(cv2_frame, [d.to_tlbr() for d in detections])
+                for track in tracker.tracks:
+                    track.camera_update(warp_matrix)
+        tracker.ecc_time += time.time() - ecc_start
 
+        predict_start = time.time()
         tracker.predict()
-        tracker.update(detections)
+        tracker.prediction_time += time.time() - predict_start
 
-        # Update visualization.
-        if display:
-            image = cv2.imread(
-                seq_info["image_filenames"][frame_idx], cv2.IMREAD_COLOR)
-            vis.set_image(image.copy())
-            vis.draw_detections(detections)
-            vis.draw_trackers(tracker.tracks)
+        tracker.update(detections, frame)
 
+        time_since_update_threshold = 0 if opt.dataset == 'dancetrack' else 1
         # Store results.
         for track in tracker.tracks:
-            if not track.is_confirmed() or track.time_since_update > 1:
+            if not track.is_confirmed() or track.time_since_update > time_since_update_threshold:
                 continue
             bbox = track.to_tlwh()
             results.append([
                     frame_idx, track.track_id, bbox[0], bbox[1], bbox[2], bbox[3]])
+            
+            if display:
+                # write ids on the image
+                scale = 1.0 * cv2_frame.shape[0] / 1080
+                cv2.putText(
+                    cv2_frame,
+                    str(track.track_id),
+                    (int(bbox[0]), int(bbox[1])),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    scale,
+                    (0, 0, 255),
+                    2
+                )
 
-    # Run tracker.
-    if display:
-        visualizer = visualization.Visualization(seq_info, update_ms=5)
-    else:
-        visualizer = visualization.NoVisualization(seq_info)
+        # Update visualization.
+        if display and len(results) > 0:
+            tracklet_means = [t.mean for t in tracker.tracks if t.is_confirmed()]
+            tracklet_bboxes = [t.to_tlwh() for t in tracker.tracks if t.is_confirmed()]
+            visualize(detections, tracklet_means, tracklet_bboxes, cv2_frame)
+
+            os.makedirs(f'output/{opt.dataset}_{opt.mode}/{opt.occlusion_threshold:.2f}/{sequence_dir.split("/")[-1]}/', exist_ok=True)
+            cv2.imwrite(f'output/{opt.dataset}_{opt.mode}/{opt.occlusion_threshold:.2f}/{sequence_dir.split("/")[-1]}/{frame_idx:05d}.jpg', cv2_frame)
+
+    visualizer = visualization.NoVisualization(seq_info)
     visualizer.run(frame_callback)
 
     # Store results.
-    f = open(output_file, 'w')
+    os.makedirs(f'output/{opt.dataset}_{opt.mode}/{opt.occlusion_threshold:.2f}/data/', exist_ok=True)
+    f = open(f'output/{opt.dataset}_{opt.mode}/{opt.occlusion_threshold:.2f}/data/{sequence_dir.split("/")[-1]}.txt', 'w')
     for row in results:
         print('%d,%d,%.2f,%.2f,%.2f,%.2f,1,-1,-1,-1' % (
             row[0], row[1], row[2], row[3], row[4], row[5]),file=f)
+    f.close()
+
+    return tracker.total_extracted_features, tracker.total_detections, tracker.total_frames, tracker.ecc_time, tracker.prediction_time, tracker.gate_time, tracker.match_time, tracker.track_management_time, tracker.embedding_time
 
 def bool_string(input_string):
     if input_string not in {"True","False"}:

@@ -31,11 +31,82 @@ data = {
         ]
     },
     'MOT20': {
+        'val':[
+            'MOT20-01',
+            'MOT20-02',
+            'MOT20-03',
+            'MOT20-05'
+        ],
         'test':[
             'MOT20-04',
             'MOT20-06',
             'MOT20-07',
             'MOT20-08'
+        ]
+    },
+    'dancetrack': {
+        'val':[
+            #    'dancetrack0004',
+            #    'dancetrack0005',
+            #    'dancetrack0007',
+            #    'dancetrack0010',
+            #    'dancetrack0014',
+            #    'dancetrack0018',
+            #    'dancetrack0019',
+            #    'dancetrack0025',
+            #    'dancetrack0026',
+            #    'dancetrack0030',
+            #    'dancetrack0034',
+            #    'dancetrack0035',
+            #    'dancetrack0041',
+            #    'dancetrack0043',
+            #    'dancetrack0047',
+            #    'dancetrack0058',
+            #    'dancetrack0063',
+            #    'dancetrack0065',
+            #    'dancetrack0073',
+            #    'dancetrack0077',
+            #    'dancetrack0079',
+            #    'dancetrack0081',
+            #    'dancetrack0090',
+            #    'dancetrack0094'
+        ],
+        'test':[
+                'dancetrack0003',
+                'dancetrack0009',
+                'dancetrack0011',
+                'dancetrack0013',
+                'dancetrack0017',
+                'dancetrack0021',
+                'dancetrack0022',
+                'dancetrack0028',
+                'dancetrack0031',
+                'dancetrack0036',
+                'dancetrack0038',
+                'dancetrack0040',
+                'dancetrack0042',
+                'dancetrack0046',
+                'dancetrack0048',
+                'dancetrack0050',
+                'dancetrack0054',
+                'dancetrack0056',
+                'dancetrack0059',
+                'dancetrack0060',
+                'dancetrack0064',
+                'dancetrack0067',
+                'dancetrack0070',
+                'dancetrack0071',
+                'dancetrack0076',
+                'dancetrack0078',
+                'dancetrack0084',
+                'dancetrack0085',
+                'dancetrack0088',
+                'dancetrack0089',
+                'dancetrack0091',
+                'dancetrack0092',
+                'dancetrack0093',
+                'dancetrack0095',
+                'dancetrack0100'
         ]
     }
 }
@@ -95,15 +166,15 @@ class opts:
         )
         self.parser.add_argument(
             '--root_dataset',
-            default='/data/dyh/data/MOTChallenge'
+            default='./data/'
         )
         self.parser.add_argument(
             '--path_AFLink',
-            default='/data/dyh/results/StrongSORT_Git/AFLink_epoch20.pth'
+            default='./precomputed/AFLink_epoch20.pth'
         )
         self.parser.add_argument(
             '--dir_save',
-            default='/data/dyh/results/StrongSORT_Git/tmp'
+            default='./precomputed/tmp'
         )
         self.parser.add_argument(
             '--EMA_alpha',
@@ -112,6 +183,27 @@ class opts:
         self.parser.add_argument(
             '--MC_lambda',
             default=0.98
+        )
+        self.parser.add_argument(
+            '--occlusion_threshold',
+            '--ot',
+            type=float,
+            default=0.5
+        )
+        self.parser.add_argument(
+            '--display',
+            action='store_true',
+            help='Display the tracking results'
+        )
+        self.parser.add_argument(
+            '--offline',
+            action='store_true',
+            help='Offline tracking'
+        )
+        self.parser.add_argument(
+            '--cheat-update',
+            action='store_true',
+            help='Offline tracking'
         )
 
     def parse(self, args=''):
@@ -123,20 +215,17 @@ class opts:
         opt.nms_max_overlap = 1.0
         opt.min_detection_height = 0
         if opt.BoT:
-            opt.max_cosine_distance = 0.4
-            opt.dir_dets = '/data/dyh/results/StrongSORT_Git/{}_{}_YOLOX+BoT'.format(opt.dataset, opt.mode)
+            opt.max_cosine_distance = 0.40
+            opt.dir_dets = './precomputed/{}_{}_YOLOX+BoT'.format(opt.dataset, opt.mode)
         else:
             opt.max_cosine_distance = 0.3
-            opt.dir_dets = '/data/dyh/results/StrongSORT_Git/{}_{}_YOLOX+simpleCNN'.format(opt.dataset, opt.mode)
+            opt.dir_dets = './precomputed/{}_{}_YOLOX+simpleCNN'.format(opt.dataset, opt.mode)
         if opt.MC:
             opt.max_cosine_distance += 0.05
         if opt.EMA:
             opt.nn_budget = 1
         else:
             opt.nn_budget = 100
-        if opt.ECC:
-            path_ECC = '/data/dyh/results/StrongSORT_Git/{}_ECC_{}.json'.format(opt.dataset, opt.mode)
-            opt.ecc = json.load(open(path_ECC))
         opt.sequences = data[opt.dataset][opt.mode]
         opt.dir_dataset = join(
             opt.root_dataset,
