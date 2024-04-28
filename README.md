@@ -42,7 +42,7 @@ Then, download the detections + features for DanceTrack that are extracted by us
 
 ## Installation 
 
-Follow exact same installation steps as described in [StrongSORT](https://github.com/dyhBUPT/StrongSORT)
+Follow the exact same installation steps as described in [StrongSORT](https://github.com/dyhBUPT/StrongSORT)
 
 ## Tracking
 
@@ -54,4 +54,4 @@ Follow exact same installation steps as described in [StrongSORT](https://github
   - th: threshold for Tespitlere Talepler algorithm as described in the paper.
   - offline: uses preextracted features when it is set.
   - display: creates a results folder and saves all annotated frames when it is set.
-  - all other arguements are explained in [StrongSORT](https://github.com/dyhBUPT/StrongSORT)
+  - all other arguments are explained in [StrongSORT](https://github.com/dyhBUPT/StrongSORT)

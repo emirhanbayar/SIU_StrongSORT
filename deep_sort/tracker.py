@@ -58,8 +58,9 @@ class Tracker:
         self.total_frames = 0
         self.total_detections = 0
         self.total_extracted_features = 0
-
-        self.embedding = Embedder()
+        
+        if not opt.offline:
+            self.embedding = Embedder()
 
     def predict(self):
         """Propagate track state distributions one time step forward.
@@ -152,8 +153,8 @@ class Tracker:
 
         self.gate_time += time.time() - gate_start
 
+        self.total_extracted_features += len(non_gated_detecions)
         if non_gated_detecions and not opt.offline:
-            self.total_extracted_features += len(non_gated_detecions)
             embedding_start = time.time()
             features = iter(self.embedding.inference(non_gated_detecions, frame))
             self.embedding_time += time.time() - embedding_start

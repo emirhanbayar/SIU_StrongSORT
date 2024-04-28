@@ -5,7 +5,6 @@
 @Time: 2022/2/28 19:41
 @Discription: opts
 """
-import json
 import argparse
 from os.path import join
 
@@ -46,30 +45,31 @@ data = {
     },
     'dancetrack': {
         'val':[
-            #    'dancetrack0004',
-            #    'dancetrack0005',
-            #    'dancetrack0007',
-            #    'dancetrack0010',
-            #    'dancetrack0014',
-            #    'dancetrack0018',
-            #    'dancetrack0019',
-            #    'dancetrack0025',
-            #    'dancetrack0026',
-            #    'dancetrack0030',
-            #    'dancetrack0034',
-            #    'dancetrack0035',
-            #    'dancetrack0041',
-            #    'dancetrack0043',
-            #    'dancetrack0047',
-            #    'dancetrack0058',
-            #    'dancetrack0063',
-            #    'dancetrack0065',
-            #    'dancetrack0073',
-            #    'dancetrack0077',
-            #    'dancetrack0079',
-            #    'dancetrack0081',
-            #    'dancetrack0090',
-            #    'dancetrack0094'
+               'dancetrack0004',
+               'dancetrack0005',
+               'dancetrack0007',
+               'dancetrack0010',
+               'dancetrack0014',
+               'dancetrack0018',
+               'dancetrack0019',
+               'dancetrack0025',
+               'dancetrack0026',
+               'dancetrack0030',
+               'dancetrack0034',
+               'dancetrack0035',
+               'dancetrack0041',
+               'dancetrack0043',
+               'dancetrack0047',
+               'dancetrack0058',
+               'dancetrack0063',
+               'dancetrack0065',
+               'dancetrack0073',
+               'dancetrack0077',
+               'dancetrack0079',
+               'dancetrack0081',
+               'dancetrack0090',
+               'dancetrack0094',
+               'dancetrack0097',
         ],
         'test':[
                 'dancetrack0003',
