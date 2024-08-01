@@ -58,3 +58,20 @@ Follow the exact same installation steps as described in [StrongSORT](https://gi
   - offline: uses preextracted features when it is set.
   - display: creates a results folder and saves all annotated frames when it is set.
   - all other arguments are explained in [StrongSORT](https://github.com/dyhBUPT/StrongSORT)
+
+## Analysis on Validation Sets
+
+<p align="center">
+  <img src="https://emirhanbayar.github.io/SIU_images/image1.png" width="44.5%" />
+  <img src="https://emirhanbayar.github.io/SIU_images/image2.png" width="45%" />
+</p>
+<p align="center">
+  <img src="https://emirhanbayar.github.io/SIU_images/image3.png" width="45%" />
+  <img src="https://emirhanbayar.github.io/SIU_images/image4.png" width="45%" />
+</p>
+
+## Results on Test Sets
+
+<p align="center">
+  <img src="https://emirhanbayar.github.io/SIU_images/image5.png" width="90%" />
+</p>
