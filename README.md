@@ -1,5 +1,5 @@
 # StrongSORT*
-**StrongSORT* Make StrongSORT Usable for Edge AI**
+**StrongSORT\* Make StrongSORT Usable for Edge AI**
 
 ## Abstract
 
@@ -25,7 +25,8 @@ Note: Place DanceTrack Validation Set into dancetrack/train
 
 2. Download official weights and detections (if you wish to test offline) that are shared by authors of StrongSORT from: [data](https://drive.google.com/drive/folders/1Zk6TaSJPbpnqbz1w4kfhkKFCEzQbjfp_?usp=sharing) in Google disk (or [baidu disk](https://pan.baidu.com/s/1EtBbo-12xhjsqW5x-dYX8A?pwd=sort) with code "sort")
 
-Then, download the detections + features for DanceTrack that are extracted by us following the instructions of the authors of StrongSORT from: [Google Drive](https://drive.google.com/drive/folders/1OpcBRS2kppvZ1wg3e0x8LrRNKP-3UYDT?usp=sharing) 
+Then, download the detections + features for DanceTrack that are extracted by us following the instructions of the authors of StrongSORT from: [Google Drive](
+https://drive.google.com/drive/folders/1k9mQWO3RJELN23Zs9jQmko5r8spt_zVP?usp=sharing) 
 
    ```
    precomputed
