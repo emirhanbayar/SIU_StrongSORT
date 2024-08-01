@@ -1,7 +1,7 @@
 # StrongSORT*
 **StrongSORT\* Make StrongSORT Usable for Edge AI**
 
-original implementation of [![IEEE Xplore](https://img.shields.io/badge/IEEE%20Xplore-10069372-00629B.svg)](https://ieeexplore.ieee.org/document/10600800)
+original implementation of [![IEEE Xplore](https://img.shields.io/badge/IEEE%20Xplore-10600800-00629B.svg)](https://ieeexplore.ieee.org/document/10600800)
 
 ## Abstract
 
