@@ -1,6 +1,8 @@
 # StrongSORT*
 **StrongSORT\* Make StrongSORT Usable for Edge AI**
 
+original implementation of [![IEEE Xplore](https://img.shields.io/badge/IEEE%20Xplore-10069372-00629B.svg)](https://ieeexplore.ieee.org/document/10600800)
+
 ## Abstract
 
 Since the position and the motion of the objects can change during long-term occlusions, ReID features remain a key component for the recent Multiple Object Tracking (MOT) methods. However, the computational cost of feature extraction via Convolutional Neural Networks (CNNs) results in extremely low Frame per Second (FPS) when they are executed on resource-constrained hardware. In this paper, we will introduce a method  that selects the detections that need feature extraction on-the-fly and extracts features from only those detections. We applied our method on StrongSORT to provide an example showcase and discussed the possibility of maintaining the advantages of feature extraction while increasing FPS.
