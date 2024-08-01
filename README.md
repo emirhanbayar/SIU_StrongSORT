@@ -1,5 +1,5 @@
-# SS*
-**SS\* Make StrongSORT Usable for Edge AI**
+# StrongSORT*
+**StrongSORT* Make StrongSORT Usable for Edge AI**
 
 ## Abstract
 
